@@ -112,6 +112,8 @@ static void connect_to_mqtt(void *ctx);
 
 void vThread_Publish_Gas(void * pvParameters);
 
+void vThread_Publish_Particles(void * pvParameters);
+
 /*******************************************************************************
  * Variables
  ******************************************************************************/
@@ -252,6 +254,39 @@ void vThread_Publish_Gas(void * pvParameters){
 	}
 }
 
+
+
+void vThread_Publish_Particles(void * pvParameters){
+
+	char *Topic_Particles = "lwip_topic/PartAlarmON";
+
+		char buffer[10];
+		sprintf(buffer, "%d", Particles_value);
+		char *Gas_val = buffer;
+
+		while (1) {
+			if(Particles_value <= Particles_Treshold){
+				PRINTF("Valor de Particulas: %d\r\n", Particles_value);
+				sys_msleep(1000U); //1 second delay
+			}else if (Particles_value > Particles_Treshold) {
+				    struct mqtt_publish_params *params = malloc(sizeof(struct mqtt_publish_params));
+				    if (params) {
+				        params->client = mqtt_client;
+				        params->topic = Topic_Particles;
+				        sprintf(buffer, "%d", Particles_value);
+				        params->payload = my_strdup(buffer); // dynamically copy string
+				        params->qos = 1;
+				        params->retain = 0;
+				        params->cb = mqtt_message_published_cb;
+				        params->arg = (void *)Topic_Particles;
+
+				        tcpip_callback(mqtt_publish_callback, params);
+				        sys_msleep(1000U); //1 second delay
+
+				    }
+				}
+		}
+}
 
 /*!
  * @brief Called when subscription request finishes.

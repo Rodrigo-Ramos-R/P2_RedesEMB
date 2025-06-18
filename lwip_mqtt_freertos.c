@@ -114,6 +114,9 @@ void vThread_Publish_Gas(void * pvParameters);
 
 void vThread_Publish_Particles(void * pvParameters);
 
+static void mqtt_message_published_cb(void *arg, err_t err);
+
+
 /*******************************************************************************
  * Variables
  ******************************************************************************/
@@ -287,6 +290,17 @@ void vThread_Publish_Particles(void * pvParameters){
 				}
 		}
 }
+
+void Reset_Values(uint8_t system_ID){
+	if(0 == system_ID){
+		Gas_value = 20;
+		RGB_pick_on(PURPLE);
+	}else if(1 == system_ID){
+		Particles_value = 10;
+		RGB_pick_on(WHITE);
+	}
+}
+
 
 /*!
  * @brief Called when subscription request finishes.

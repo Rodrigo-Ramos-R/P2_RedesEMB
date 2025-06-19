@@ -155,12 +155,19 @@ static volatile bool connected = false;
  * Code
  ******************************************************************************/
 
-uint16_t Gas_value = 10;
-uint16_t Particles_value = 20;
+#define TpID_Gas_Thresh 	0
+#define TpID_Part_Thresh 	1
+#define TpID_GasAlarmOff 	2
+#define TpID_GasPartOff 	3
+
+#define Gas_default 10;
+#define Part_default 10;
 
 uint8_t Gas_Treshold = 30;
 uint8_t Particles_Treshold = 50;
 
+uint16_t Gas_value = Gas_default;
+uint16_t Particles_value = Part_default;
 
 
 //ADD MUTEX
@@ -227,32 +234,28 @@ char *my_strdup(const char *src) {
 
 void vThread_Publish_Gas(void * pvParameters){
 
-	char *Topic_Gas = "lwip_topic/GasAlarmON";
+	char *Topic_Gas = "lwip_topic/GasValues";
 
 	char buffer[10];
 	sprintf(buffer, "%d", Gas_value);
 	char *Gas_val = buffer;
 
 	while (1) {
-		if(Gas_value <= Gas_Treshold){
 			PRINTF("Valor de Gas: %d\r\n", Gas_value);
-			sys_msleep(1000U); //1 second delay
-		}else if (Gas_value > Gas_Treshold) {
-			    struct mqtt_publish_params *params = malloc(sizeof(struct mqtt_publish_params));
-			    if (params) {
-			        params->client = mqtt_client;
-			        params->topic = Topic_Gas;
-			        sprintf(buffer, "%d", Gas_value);
-			        params->payload = my_strdup(buffer); // dynamically copy string
-			        params->qos = 1;
-			        params->retain = 0;
-			        params->cb = mqtt_message_published_cb;
-			        params->arg = (void *)Topic_Gas;
+			struct mqtt_publish_params *params = malloc(sizeof(struct mqtt_publish_params));
+			if (params) {
+				params->client = mqtt_client;
+				params->topic = Topic_Gas;
+				sprintf(buffer, "%d", Gas_value);
+				params->payload = my_strdup(buffer); // dynamically copy string
+				params->qos = 1;
+				params->retain = 0;
+				params->cb = mqtt_message_published_cb;
+				params->arg = (void *)Topic_Gas;
 
-			        tcpip_callback(mqtt_publish_callback, params);
-			        sys_msleep(1000U); //1 second delay
+				tcpip_callback(mqtt_publish_callback, params);
+				sys_msleep(6000U); //1 second delay
 
-			    }
 			}
 	}
 }
@@ -261,42 +264,40 @@ void vThread_Publish_Gas(void * pvParameters){
 
 void vThread_Publish_Particles(void * pvParameters){
 
-	char *Topic_Particles = "lwip_topic/PartAlarmON";
+	char *Topic_Particles = "lwip_topic/PartValues";
 
 		char buffer[10];
 		sprintf(buffer, "%d", Particles_value);
 		char *Gas_val = buffer;
 
 		while (1) {
-			if(Particles_value <= Particles_Treshold){
 				PRINTF("Valor de Particulas: %d\r\n", Particles_value);
-				sys_msleep(1000U); //1 second delay
-			}else if (Particles_value > Particles_Treshold) {
-				    struct mqtt_publish_params *params = malloc(sizeof(struct mqtt_publish_params));
-				    if (params) {
-				        params->client = mqtt_client;
-				        params->topic = Topic_Particles;
-				        sprintf(buffer, "%d", Particles_value);
-				        params->payload = my_strdup(buffer); // dynamically copy string
-				        params->qos = 1;
-				        params->retain = 0;
-				        params->cb = mqtt_message_published_cb;
-				        params->arg = (void *)Topic_Particles;
+				struct mqtt_publish_params *params = malloc(sizeof(struct mqtt_publish_params));
+				if (params) {
+					params->client = mqtt_client;
+					params->topic = Topic_Particles;
+					sprintf(buffer, "%d", Particles_value);
+					params->payload = my_strdup(buffer); // dynamically copy string
+					params->qos = 1;
+					params->retain = 0;
+					params->cb = mqtt_message_published_cb;
+					params->arg = (void *)Topic_Particles;
 
-				        tcpip_callback(mqtt_publish_callback, params);
-				        sys_msleep(1000U); //1 second delay
+					tcpip_callback(mqtt_publish_callback, params);
+					sys_msleep(9000U); //1 second delay
 
-				    }
-				}
-		}
+			}
+	}
 }
 
 void Reset_Values(uint8_t system_ID){
 	if(0 == system_ID){
-		Gas_value = 20;
+		Gas_value = Gas_default;
+		PRINTF("Gas values Reset \r\n");
 		RGB_pick_on(PURPLE);
 	}else if(1 == system_ID){
-		Particles_value = 10;
+		Particles_value = Part_default;
+		PRINTF("Particles values Reset \r\n");
 		RGB_pick_on(WHITE);
 	}
 }
@@ -331,13 +332,13 @@ static void mqtt_incoming_publish_cb(void *arg, const char *topic, u32_t tot_len
     PRINTF("Received %u bytes from the topic \"%s\": \"", tot_len, topic);
 
     if(0 == strcmp(topic, "lwip_topic/GasThresh")){
-    	Topic_id = 0;
+    	Topic_id = TpID_Gas_Thresh;
     } else if(0 == strcmp(topic, "lwip_topic/PartThresh")){
-    	Topic_id = 1;
+    	Topic_id = TpID_Part_Thresh;
     }else if(0 == strcmp(topic, "lwip_topic/GasAlarmOFF")){
-    	Topic_id = 2;
+    	Topic_id = TpID_GasAlarmOff;
     }else if(0 == strcmp(topic, "lwip_topic/PartAlarmOFF")){
-    	Topic_id = 3;
+    	Topic_id = TpID_GasPartOff;
     }
 }
 
@@ -365,12 +366,14 @@ static void mqtt_incoming_data_cb(void *arg, const u8_t *data, u16_t len, u8_t f
 
     switch(Topic_id){
     case 0:
-			Gas_Treshold = (uint8_t)data[0];
-			Gas_Treshold = Gas_Treshold+(uint8_t)data[1];
+			Gas_Treshold = (uint8_t)data[0] - 48;
+			Gas_Treshold = Gas_Treshold*10 + (uint8_t)data[1] - 48;
+			PRINTF("Gas Treshhold actualizado: %d\r\n", Gas_Treshold);
     	break;
     case 1:
-    		Particles_Treshold = (uint8_t)data[0];
-    		Particles_Treshold = Particles_Treshold+(uint8_t)data[1];
+    		Particles_Treshold = (uint8_t)data[0] - 48;
+    		Particles_Treshold = Particles_Treshold*10 +(uint8_t)data[1] - 48;
+    		PRINTF("Particles Treshhold actualizado: %d\r\n", Particles_Treshold);
     	break;
     case 2:
     		System_id = 0;

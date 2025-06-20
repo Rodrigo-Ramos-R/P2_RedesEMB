@@ -22,9 +22,6 @@
 
 volatile static gpio_interrupt_flags_t g_intr_status_flag = {0};
 
-static void (*gpio_D_callback)(void) = 0;
-static void (*gpio_A_callback)(void) = 0;
-
 void GPIO_init(void){
 
 	CLOCK_EnableClock(kCLOCK_PortA);
@@ -82,43 +79,18 @@ void GPIO_init(void){
 	/* PORTB17 (pin 63) is configured as UART0_TX */
 	PORT_SetPinMux(PORTB, 17U, kPORT_MuxAlt3);
 
-	PORT_SetPinMux(PORTE, 24U, kPORT_PinDisabledOrAnalog);
-
 }
 
-void PORTA_IRQHandler(void)
-{
-	if(gpio_A_callback)
-	{
-		gpio_A_callback();
-	}
-
+void PORTA_IRQHandler(void) {
+	g_intr_status_flag.flag_port_a = true;
 	GPIO_PortClearInterruptFlags(GPIOA, 0xFFFFFFFF);
 }
 
 void PORTD_IRQHandler(void)
 {
-	if(gpio_D_callback)
-	{
-		gpio_D_callback();
-	}
-
+	g_intr_status_flag.flag_port_d = true;
 	GPIO_PortClearInterruptFlags(GPIOD, 0xFFFFFFFF);
 }
-
-void GPIO_callback_init(gpio_name_t gpio, void (*handler))
-{
-	if(GPIO_A == gpio)
-	{
-		gpio_A_callback = handler;
-	}
-	else
-	{
-		gpio_D_callback = handler;
-	}
-
-}
-
 
 void GPIO_clear_irq_status(gpio_name_t gpio)
 {

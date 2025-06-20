@@ -17,9 +17,9 @@
 /* TODO: insert other include files here. */
 #include "RGB.h"
 #include "GPIO.h"
-#include "bits.h"
 #include <stdint.h>
 #include "fsl_gpio.h"
+#include "bits.h"
 
 BooleanType HFlag = FALSE;
 
@@ -93,3 +93,5 @@ void LED_TOOGLE(void){
 	}
 
 }
+
+

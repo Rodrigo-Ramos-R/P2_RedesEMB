@@ -81,8 +81,4 @@ void GPIO_clear_irq_status(gpio_name_t gpio);
  */
 uint8_t GPIO_get_irq_status(gpio_name_t gpio);
 
-void GPIO_callback_init(gpio_name_t gpio, void (*handler));
-
-
-
 #endif /* GPIO_H_ */
